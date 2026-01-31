@@ -1,0 +1,28 @@
+.child-tab-content {
+    padding: 20px;
+}
+
+.tab-content {
+    min-height: 400px;
+}
+
+.badge {
+    font-size: 1.2rem;
+    padding: 0.2rem 0.5rem;
+}
+
+.nav-tabs .nav-link {
+    cursor: pointer;
+}
+
+.card {
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.list-group-item {
+    transition: background-color 0.2s;
+}
+
+.list-group-item:hover {
+    background-color: #f8f9fa;
+}

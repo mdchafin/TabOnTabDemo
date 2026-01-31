@@ -1,0 +1,154 @@
+@rendermode InteractiveServer
+@using TabOnTabDemo.Models
+@using TabOnTabDemo.Services
+@inject TabStateService TabStateService
+
+<div class="child-tab-content">
+    @if (tabState != null)
+    {
+        <div class="mb-3">
+            <h4>@tabState.SourceItem?.Name</h4>
+            <p class="text-muted">@tabState.SourceItem?.Description</p>
+        </div>
+
+        <div class="alert @(tabState.IsModified ? "alert-warning" : "alert-info")">
+            @if (tabState.IsModified)
+            {
+                <span>?? This tab has unsaved changes</span>
+            }
+            else
+            {
+                <span>? No unsaved changes</span>
+            }
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label"><strong>Data:</strong></label>
+            <textarea class="form-control" 
+                      rows="5" 
+                      @bind="currentData" 
+                      @bind:event="oninput"
+                      @onchange="OnDataChanged"></textarea>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label"><strong>Additional Notes:</strong></label>
+            <input type="text" 
+                   class="form-control" 
+                   @bind="additionalNotes" 
+                   @bind:event="oninput"
+                   @onchange="OnNotesChanged"
+                   placeholder="Enter additional notes..." />
+        </div>
+
+        <div class="mb-3">
+            <button class="btn btn-success me-2" @onclick="SaveChanges" disabled="@(!tabState.IsModified)">
+                Save Changes
+            </button>
+            <button class="btn btn-secondary" @onclick="ResetChanges" disabled="@(!tabState.IsModified)">
+                Reset
+            </button>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h5>Tab State Information</h5>
+            </div>
+            <div class="card-body">
+                <p><strong>Tab ID:</strong> @tabState.TabId</p>
+                <p><strong>Original Data:</strong> @tabState.SourceItem?.Data</p>
+                <p><strong>Modified:</strong> @tabState.IsModified</p>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="alert alert-warning">
+            Tab state not found.
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public string TabId { get; set; } = string.Empty;
+
+    private TabState? tabState;
+    private string currentData = string.Empty;
+    private string additionalNotes = string.Empty;
+
+    protected override void OnParametersSet()
+    {
+        LoadTabState();
+    }
+
+    private void LoadTabState()
+    {
+        tabState = TabStateService.GetOrCreateTabState(TabId);
+        currentData = tabState.CurrentData;
+        
+        if (tabState.AdditionalState.TryGetValue("notes", out var notes))
+        {
+            additionalNotes = notes?.ToString() ?? string.Empty;
+        }
+    }
+
+    private void OnDataChanged()
+    {
+        if (tabState != null)
+        {
+            TabStateService.UpdateTabState(TabId, state =>
+            {
+                state.CurrentData = currentData;
+                state.IsModified = currentData != state.SourceItem?.Data;
+            });
+            LoadTabState();
+        }
+    }
+
+    private void OnNotesChanged()
+    {
+        if (tabState != null)
+        {
+            TabStateService.UpdateTabState(TabId, state =>
+            {
+                state.AdditionalState["notes"] = additionalNotes;
+                state.IsModified = true;
+            });
+            LoadTabState();
+        }
+    }
+
+    private void SaveChanges()
+    {
+        if (tabState != null)
+        {
+            TabStateService.UpdateTabState(TabId, state =>
+            {
+                if (state.SourceItem != null)
+                {
+                    state.SourceItem.Data = currentData;
+                }
+                state.IsModified = false;
+            });
+            LoadTabState();
+        }
+    }
+
+    private void ResetChanges()
+    {
+        if (tabState?.SourceItem != null)
+        {
+            currentData = tabState.SourceItem.Data;
+            additionalNotes = string.Empty;
+            
+            TabStateService.UpdateTabState(TabId, state =>
+            {
+                state.CurrentData = state.SourceItem?.Data ?? string.Empty;
+                state.IsModified = false;
+                state.AdditionalState.Remove("notes");
+            });
+            LoadTabState();
+        }
+    }
+}
